@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { AppState, Action, ActionType } from '../types';
 import { SlideRenderer } from './SlideRenderer';
-import { LayoutGrid, Download, Play, RefreshCw, ChevronLeft, ChevronRight, MonitorPlay } from 'lucide-react';
+import { LayoutGrid, Download, Play, RefreshCw, ChevronLeft, ChevronRight, MonitorPlay, Home } from 'lucide-react';
 import { exportPresentation } from '../services/pptxService';
+import { generateImage } from '../services/geminiService';
+import { generateHTML } from '../services/htmlExportService';
 
 interface EditorProps {
   state: AppState;
@@ -13,9 +15,28 @@ export const Editor: React.FC<EditorProps> = ({ state, dispatch }) => {
   const { presentation, currentSlideIndex } = state;
   const slides = presentation?.slides || [];
   const currentSlide = slides[currentSlideIndex];
+  
+  // Track direction for animation
+  const prevSlideIndexRef = useRef(currentSlideIndex);
+  const direction = currentSlideIndex > prevSlideIndexRef.current ? 1 : -1;
+  prevSlideIndexRef.current = currentSlideIndex;
 
   const handleUpdateSlide = (id: string, field: string, value: any) => {
     dispatch({ type: ActionType.UPDATE_SLIDE, payload: { id, field: field as any, value } });
+  };
+
+  const handleGenerateImage = async (id: string, prompt: string) => {
+    dispatch({ type: ActionType.UPDATE_SLIDE, payload: { id, field: 'isImageGenerating', value: true } });
+    
+    try {
+      const generatedImage = await generateImage(prompt, '1:1');
+      dispatch({ type: ActionType.UPDATE_SLIDE, payload: { id, field: 'imageUrl', value: generatedImage } });
+    } catch (error) {
+      console.error("Failed to generate image", error);
+      alert("Failed to generate image. Please try again.");
+    } finally {
+      dispatch({ type: ActionType.UPDATE_SLIDE, payload: { id, field: 'isImageGenerating', value: false } });
+    }
   };
 
   const handleExport = () => {
@@ -25,15 +46,22 @@ export const Editor: React.FC<EditorProps> = ({ state, dispatch }) => {
   };
 
   const handleHTMLPreview = () => {
-     // Create a basic data blob for the user to "simulate" a web player data download
-     const data = JSON.stringify(presentation, null, 2);
-     const blob = new Blob([data], { type: 'application/json' });
-     const url = URL.createObjectURL(blob);
-     const a = document.createElement('a');
-     a.href = url;
-     a.download = 'kiminote-web-data.json';
-     a.click();
-     alert("Web Player Data exported! Use a JSON viewer or custom player to load this.");
+    if (presentation) {
+      const htmlContent = generateHTML(presentation);
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `KIMINOTE_${presentation.topic.replace(/\s+/g, '_')}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleHome = () => {
+    if (window.confirm("Return to home? Any unsaved changes will be lost.")) {
+      dispatch({ type: ActionType.RESET });
+    }
   };
 
   return (
@@ -41,11 +69,18 @@ export const Editor: React.FC<EditorProps> = ({ state, dispatch }) => {
       
       {/* Sidebar - Thumbnails */}
       <div className="w-72 bg-dark-900 border-r border-white/5 flex flex-col">
-        <div className="h-16 flex items-center px-6 border-b border-white/5">
-          <span className="font-bold text-banana-500 tracking-wider flex items-center gap-2">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-white/5">
+          <span className="font-bold text-banana-500 tracking-wider flex items-center gap-2 select-none">
             <div className="w-3 h-3 bg-banana-500 rounded-full animate-pulse" />
             KIMINOTE
           </span>
+          <button 
+            onClick={handleHome}
+            className="p-2 -mr-2 text-gray-500 hover:text-white hover:bg-white/10 rounded-full transition-all"
+            title="Start New Presentation"
+          >
+            <Home size={18} />
+          </button>
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -90,10 +125,11 @@ export const Editor: React.FC<EditorProps> = ({ state, dispatch }) => {
           <div className="flex items-center gap-3">
              <button 
                onClick={handleHTMLPreview}
-               className="p-2 text-gray-400 hover:text-white transition-colors"
-               title="Export JSON"
+               className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+               title="Export HTML Player"
              >
                <MonitorPlay size={18} />
+               <span className="text-xs font-medium">Export HTML</span>
              </button>
              <button 
                onClick={handleExport}
@@ -113,7 +149,9 @@ export const Editor: React.FC<EditorProps> = ({ state, dispatch }) => {
                <SlideRenderer 
                  slide={currentSlide} 
                  isActive={true} 
+                 direction={direction}
                  onUpdate={handleUpdateSlide} 
+                 onGenerateImage={handleGenerateImage}
                />
              )}
           </div>

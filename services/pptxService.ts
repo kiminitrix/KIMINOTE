@@ -86,6 +86,23 @@ export const exportPresentation = (data: PresentationData) => {
         slide.addShape(pres.ShapeType.rect, { x: 7, y: 0, w: 6.33, h: 7.5, fill: { color: '222222' } });
         slide.addText("Visual Focus", { x: 9, y: 3.5, fontSize: 14, color: '555555' });
         break;
+
+      case SlideLayout.VisualFocus:
+        // Full background image logic
+        if (slideContent.imageUrl && slideContent.imageUrl.startsWith('data:')) {
+           slide.addImage({ data: slideContent.imageUrl, x: 0, y: 0, w: '100%', h: '100%' });
+        } else {
+           slide.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: '100%', h: '100%', fill: { color: '222222' } });
+        }
+        // Gradient overlay simulation (semi-transparent rect)
+        slide.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: '60%', h: '100%', fill: { color: '000000', transparency: 30 } });
+        
+        slide.addText(slideContent.title, { ...titleOpts, x: 0.5, y: 2, w: '50%', h: 2, fontSize: 48, shadow: { type: 'outer', color: '000000', blur: 10, offset: 2, angle: 45 } });
+        if (slideContent.points) {
+           const bullets = slideContent.points.map(pt => ({ text: pt, options: { bullet: false } })); // No bullet for this cinematic look
+           slide.addText(bullets, { ...bodyOpts, x: 0.5, y: 4, w: '50%', h: 3, fontSize: 24, color: 'EEEEEE' });
+        }
+        break;
         
       default:
         slide.addText(slideContent.title, titleOpts);

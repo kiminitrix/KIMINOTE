@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UploadCloud, FileText, Loader2 } from 'lucide-react';
 
 interface FileUploadProps {
@@ -8,9 +8,29 @@ interface FileUploadProps {
 }
 
 export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessing, status }) => {
+  const [isDragging, setIsDragging] = useState(false);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       onFileSelect(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      onFileSelect(e.dataTransfer.files[0]);
     }
   };
 
@@ -41,13 +61,22 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessi
              </div>
           </div>
         ) : (
-          <label className="flex flex-col items-center justify-center w-full h-80 border-2 border-dashed border-gray-700 rounded-2xl cursor-pointer bg-dark-900/50 hover:bg-dark-900 hover:border-banana-500 hover:shadow-[0_0_30px_rgba(255,215,0,0.1)] transition-all group">
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              <div className="mb-6 p-4 bg-dark-800 rounded-full group-hover:scale-110 transition-transform">
-                 <UploadCloud className="w-10 h-10 text-banana-500" />
+          <label 
+            className={`flex flex-col items-center justify-center w-full h-80 border-2 border-dashed rounded-2xl cursor-pointer transition-all group ${
+              isDragging 
+                ? 'border-banana-500 bg-banana-500/10 shadow-[0_0_50px_rgba(255,215,0,0.2)] scale-105' 
+                : 'border-gray-700 bg-dark-900/50 hover:bg-dark-900 hover:border-banana-500 hover:shadow-[0_0_30px_rgba(255,215,0,0.1)]'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="flex flex-col items-center justify-center pt-5 pb-6 pointer-events-none">
+              <div className={`mb-6 p-4 rounded-full transition-transform ${isDragging ? 'bg-banana-500 text-black scale-125' : 'bg-dark-800 group-hover:scale-110'}`}>
+                 <UploadCloud className={`w-10 h-10 ${isDragging ? 'text-black' : 'text-banana-500'}`} />
               </div>
-              <p className="mb-2 text-xl font-semibold text-gray-300 group-hover:text-white">
-                Click to upload or drag and drop
+              <p className={`mb-2 text-xl font-semibold transition-colors ${isDragging ? 'text-banana-500' : 'text-gray-300 group-hover:text-white'}`}>
+                {isDragging ? 'Drop it like it\'s hot!' : 'Click to upload or drag and drop'}
               </p>
               <p className="text-sm text-gray-500">
                 PDF, TXT, CSV (Max 10MB)

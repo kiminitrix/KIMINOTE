@@ -3,7 +3,8 @@ export enum SlideLayout {
   BulletPoints = 'bullet-points',
   BigNumber = 'big-number',
   SplitImage = 'split-image',
-  SectionHeader = 'section-header'
+  SectionHeader = 'section-header',
+  VisualFocus = 'visual-focus'
 }
 
 export interface SlideContent {
@@ -15,6 +16,7 @@ export interface SlideContent {
   visualDescription: string;
   speakerNotes: string;
   imageUrl?: string; // Generated or placeholder URL
+  isImageGenerating?: boolean;
 }
 
 export interface PresentationData {

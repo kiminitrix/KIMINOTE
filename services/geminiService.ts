@@ -12,7 +12,8 @@ Tasks:
    - 'title': For the main cover.
    - 'bullet-points': For lists and features.
    - 'big-number': For stats and data focus.
-   - 'split-image': For conceptual comparison or visual heavy content.
+   - 'split-image': For conceptual comparison.
+   - 'visual-focus': For highly visual storytelling where the image is the hero and text is minimal.
    - 'section-header': To introduce new topics.
 4. Write punchy, concise content. Max 5 bullet points per slide.
 5. Create a 'visualDescription' for an AI image generator (e.g., "Abstract 3D golden isometric shapes on black background").
@@ -51,7 +52,8 @@ export const generateSlides = async (textContent: string): Promise<PresentationD
                     SlideLayout.BulletPoints, 
                     SlideLayout.BigNumber, 
                     SlideLayout.SplitImage, 
-                    SlideLayout.SectionHeader
+                    SlideLayout.SectionHeader,
+                    SlideLayout.VisualFocus
                   ] },
                   title: { type: Type.STRING },
                   subtitle: { type: Type.STRING },
@@ -84,6 +86,38 @@ export const generateSlides = async (textContent: string): Promise<PresentationD
 
   } catch (error) {
     console.error("Gemini API Error:", error);
+    throw error;
+  }
+};
+
+export const generateImage = async (prompt: string, aspectRatio: '16:9' | '1:1' | '3:4' = '16:9'): Promise<string> => {
+  if (!process.env.API_KEY) {
+    throw new Error("API Key is missing");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: { parts: [{ text: prompt }] },
+      config: {
+        // @ts-ignore - The SDK types might not be fully up to date with imageConfig yet in all environments
+        imageConfig: {
+          aspectRatio: aspectRatio
+        }
+      }
+    });
+
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
+    }
+    
+    throw new Error("No image generated");
+  } catch (error) {
+    console.error("Gemini Image Gen Error:", error);
     throw error;
   }
 };
